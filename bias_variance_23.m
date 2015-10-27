@@ -1,6 +1,6 @@
 %Bias/Variance Tradeoff
 %f(x)=2x^2+E
-function[g1,b1,v1,g2,b2,v2,g3,b3,v3,g4,b4,v4,g5,b5,v5,g6,b6,v6]=bias_variance(number_of_samples)
+function[g1,b1,v1,g2,b2,v2,g3,b3,v3,g4,b4,v4,g5,b5,v5,g6,b6,v6]=bias_variance_23(number_of_samples)
 % Generate 100 datasets, each containing number_of_samples samples(x,y)
 dataset=-1+(1+1)*rand(100,number_of_samples); %x_i
 labels=2*(dataset).^2+guassian(dataset); %y_i=f(x_i)
@@ -26,15 +26,7 @@ loss(i,1)=(sum((1-labels(i,:)).^2))/number_of_samples;
 end
 
 %bias^2
-%True label y
-
-for i=1:100
-    efx=1;
-    err_b(i)=((sum(true_y(i,:)-efx))/number_of_samples).^2;
-    err_v(i)=sum((prediction(i,:)-efx).^2)/number_of_samples;
-end
-bias=sum(err_b)/(100);
-variance=sum(err_v)/(100);
+[bias,variance]=bi_var(prediction,true_y,number_of_samples);
 
 function[loss,bias,variance]=g2_func(dataset,labels,number_of_samples,true_y)
 %g2(x)=w0
@@ -46,18 +38,20 @@ for i=1:100
 end
 w_0=w;
 %compute the sum-square-error on every dataset
+loss=zeros(100,1);
+prediction=ones(100,number_of_samples);
 for i=1:100
     prediction(i,:)=w_0(i);
     loss(i,1)=(sum((labels(i,:)-w_0(i)).^2))/number_of_samples;
 end
 
-%bias^2
-%True label y
-
+err_b=zeros(100,1);
+err_v=zeros(100,1);
 for i=1:100
-    efx=(w_0(i));
-    err_b(i)=((sum(true_y(i,:)-efx))/number_of_samples).^2;
+    efx=w_0(i);
+    err_b(i)=((prediction(i,:)-true_y(i,:))*(prediction(i,:)-true_y(i,:))')/number_of_samples;
     err_v(i)=sum((prediction(i,:)-efx).^2)/number_of_samples;
+   
 end
 bias=sum(err_b)/(100);
 variance=sum(err_v)/(100);
@@ -80,14 +74,7 @@ for i=1:100
     loss(i,1)=(sum((labels(i,:)-(prediction(i,:))).^2))/number_of_samples;
 end
 %bias^2
-for i=1:100
-    efx=(sum(prediction(i,:)))/number_of_samples;
-    err_b(i)=((sum(true_y(i,:)-efx))/number_of_samples).^2;
-    err_v(i)=sum((prediction(i,:)-efx).^2)/number_of_samples;
-   
-end
-bias=sum(err_b)/(100);
-variance=sum(err_v)/(100);
+[bias,variance]=bi_var(prediction,true_y,number_of_samples);
 
 function[loss,bias,variance]=g4_func(dataset,labels,number_of_samples,true_y)
 %g4(x)=w0+w1x+w2x^2
@@ -110,16 +97,8 @@ for i=1:100
     loss(i,1)=(sum((labels(i,:)-(prediction(i,:))).^2));
 end
 
-%bias^2
+[bias,variance]=bi_var(prediction,true_y,number_of_samples);
 
-for i=1:100
-    efx=(sum(prediction(i,:)))/number_of_samples;
-   err_b(i)=((sum(true_y(i,:)-efx))/number_of_samples).^2;
-    err_v(i)=sum((prediction(i,:)-efx).^2)/number_of_samples;
-end
-efx
-bias=sum(err_b)/(100);
-variance=sum(err_v)/(100);
 function[loss,bias,variance]=g5_func(dataset,labels,number_of_samples,true_y)
 %g5(x)=w0+w1x+w2x^2+w3x^3
 a=ones(number_of_samples,1);
@@ -129,7 +108,7 @@ for i=1:100
     x=[x x_.^2];
     x=[x x_.^3];
     y=transpose(labels(i,:));
-    w(i,:)=inv(transpose(x)*x)*transpose(x)*y;
+    w(i,:)=(transpose(x)*x)\(transpose(x)*y);
 end
 w_0=w(:,1);
 w_1=w(:,2);
@@ -143,15 +122,7 @@ for i=1:100
     loss(i,1)=(sum((labels(i,:)-(prediction(i,:))).^2))/number_of_samples;
 end
 
-%bias^2
-
-for i=1:100
-    efx=(sum(prediction(i,:)))/number_of_samples;
-    err_b(i)=((sum(true_y(i,:)-efx))/number_of_samples).^2;
-    err_v(i)=sum((prediction(i,:)-efx).^2)/number_of_samples;
-end
-bias=sum(err_b)/(100);
-variance=sum(err_v)/(100);
+[bias,variance]=bi_var(prediction,true_y,number_of_samples);
 
 function[loss,bias,variance]=g6_func(dataset,labels,number_of_samples,true_y)
 %g6(x)=w0+w1x+w2x^2+w3x^3+w4x^4
@@ -179,15 +150,20 @@ for i=1:100
 end
 
 %bias^2
-
-for i=1:100
-   efx=(sum(prediction(i,:)))/number_of_samples;
-    err_b(i)=((sum(true_y(i,:)-efx))/number_of_samples).^2;
-    err_v(i)=sum((prediction(i,:)-efx).^2)/number_of_samples;
-end
-bias=sum(err_b)/(100);
-variance=sum(err_v)/(100);
+[bias,variance]=bi_var(prediction,true_y,number_of_samples);
 
 function[value]=guassian(x)
 exp_term=exp(-(x.^2)./(2*0.1));
 value=1/(sqrt(2*pi*0.1)).*exp_term;
+
+function[b,v]=bi_var(prediction,true_y,number_of_samples)
+err_b=zeros(100,1);
+err_v=zeros(100,1);
+for i=1:100
+    efx=(sum(prediction(i,:)))/number_of_samples;
+    err_b(i)=((prediction(i,:)-true_y(i,:))*(prediction(i,:)-true_y(i,:))')/number_of_samples;
+    err_v(i)=sum((prediction(i,:)-efx).^2)/number_of_samples;
+   
+end
+b=sum(err_b)/(100);
+v=sum(err_v)/(100);
